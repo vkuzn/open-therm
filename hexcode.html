@@ -1,0 +1,97 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <script type="text/javascript">
+
+        var EL_MSG_TYPE = "msgType";
+        var EL_DATA_ID = "dataID";
+        var EL_DATA_VALUE = "dataValue";
+
+        var EL_RESULT = "result";
+
+        function getElementValue(elId) {
+            var el = document.getElementById(elId);
+            var val = parseInt(el.value);
+            if (isNaN(val)) {
+                alert("Couldn't parse: " + elId + " (" + el.value + ")");
+            }
+            return val;
+        }
+
+        function updateResult(val) {
+            var str = "";
+            for (var i = 0; i < 32; ++i) {
+                str = (val & 1) + str;
+                val >>= 1;
+            }
+            var el = document.getElementById(EL_RESULT);
+            el.value = "0b" + str;
+        }
+
+        function calcParity(msg) {
+            var onesCount = 0;
+            while (msg != 0) {
+                onesCount += (msg & 1);
+                msg >>= 1;
+            }
+            return onesCount & 1;
+        }
+
+        function calc() {
+            var msgType = getElementValue(EL_MSG_TYPE);
+            var dataID = getElementValue(EL_DATA_ID);
+            var dataValue = getElementValue(EL_DATA_VALUE);
+
+            var offs = 0;
+            var msg = 0;
+
+            msg |= dataValue << offs;
+            offs += 16; //data value
+
+            msg |= dataID << offs;
+            offs += 8 + 4; //data id + spare
+
+            msg |= msgType;
+            offs += 3;
+
+            msg |= calcParity(msg) << offs;
+
+            updateResult(msg);
+        }
+
+    </script>
+</head>
+<body>
+    <table>
+        <tr>
+            <td>msg type</td>
+            <td>
+                <input type="text" id="msgType" />
+            </td>
+        </tr>
+        <tr>
+            <td>data ID</td>
+            <td>
+                <input type="text" id="dataID" />
+            </td>
+        </tr>
+        <tr>
+            <td>data value</td>
+            <td>
+                <input type="text" id="dataValue" />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <input type="button" value="Calc" onclick="javascript:calc()" />
+            </td>
+            <td width="">
+                <input type="text" id="result" style="width:300px" />
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
