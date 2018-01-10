@@ -3,68 +3,81 @@
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="utf-8" />
-    <title></title>
+    <title>Message codes generator</title>
     <script type="text/javascript">
 
         var EL_MSG_TYPE = "msgType";
         var EL_DATA_ID = "dataID";
         var EL_DATA_VALUE = "dataValue";
-
         var EL_RESULT = "result";
 
-        function getElementValue(elId) {
+        function getInputValue(elId) {
             var el = document.getElementById(elId);
-            var val = parseInt(el.value);
-            if (isNaN(val)) {
-                alert("Couldn't parse: " + elId + " (" + el.value + ")");
+            var val = Number(el.value);
+            if (Number.isNaN(val)) {
+                alert("Couldn't parse: " + el.value);
             }
             return val;
         }
 
-        function updateResult(val) {
+        function writeResult(elId, val) {
+            var el = document.getElementById(elId);
+            el.value = "0x" + toHexStr(val) + " // " + toBinStr(val, true);
+        }
+
+        function toHexStr(val, separate) {
+
+            var str = (val & 0xFFFF).toString(16);
+            for (var lzs = 4 - str.length; lzs > 0; --lzs) {
+                str = "0" + str;
+            }
+            if (separate) {
+                str = " " + str;
+            }
+            str = ((val >> 16) & 0xFFFF).toString(16) + str;
+            return str;
+        }
+
+        function toBinStr(val, separate) {
             var str = "";
             for (var i = 0; i < 32; ++i) {
+                if (separate && (i % 4 == 0)) {
+                    str = " " + str;
+                }
                 str = (val & 1) + str;
                 val >>= 1;
             }
-            var el = document.getElementById(EL_RESULT);
-            el.value = "0b" + str;
+            return str;
         }
 
-        function calcParity(msg) {
+        function calcParity(val) {
+            //even parity bit
             var onesCount = 0;
-            while (msg != 0) {
-                onesCount += (msg & 1);
-                msg >>= 1;
+            for (var i = 0; i < 31; ++i) {
+                onesCount += (val & 1);
+                val >>= 1;
             }
             return onesCount & 1;
         }
 
         function calc() {
-            var msgType = getElementValue(EL_MSG_TYPE);
-            var dataID = getElementValue(EL_DATA_ID);
-            var dataValue = getElementValue(EL_DATA_VALUE);
+            var msgType = getInputValue(EL_MSG_TYPE);
+            var dataID = getInputValue(EL_DATA_ID);
+            var dataValue = getInputValue(EL_DATA_VALUE);
 
-            var offs = 0;
-            var msg = 0;
+            var msg = dataValue << 8
+                | dataID << 16
+                | msgType << 28;
 
-            msg |= dataValue << offs;
-            offs += 16; //data value
+            msg |= calcParity(msg) << 31;
 
-            msg |= dataID << offs;
-            offs += 8 + 4; //data id + spare
-
-            msg |= msgType;
-            offs += 3;
-
-            msg |= calcParity(msg) << offs;
-
-            updateResult(msg);
+            writeResult(EL_RESULT, msg);
         }
 
     </script>
 </head>
 <body>
+    <h3>OpenTherm message codes generator</h3>
     <table>
         <tr>
             <td>msg type</td>
@@ -85,13 +98,30 @@
             </td>
         </tr>
         <tr>
+            <td>Description</td>
+            <td></td>
+        </tr>
+        <tr>
             <td>
-                <input type="button" value="Calc" onclick="javascript:calc()" />
+                <input type="button" value="Generate" onclick="javascript:calc()" />
             </td>
             <td width="">
-                <input type="text" id="result" style="width:300px" />
+                <input type="text" id="result" style="width:400px" />
             </td>
         </tr>
+        <tr>
+        <td></td>
+        <td>
+        1 parity bit (set in such a way that there's an even number of 1s in the entire message)<br />
+        3 bits for the message type<br />
+        4 spare bits (which are all 0)<br />
+        8 bits data ID<br />
+        16 bits data value
+        </td>
+        </tr>
     </table>
+
+
+
 </body>
 </html>
